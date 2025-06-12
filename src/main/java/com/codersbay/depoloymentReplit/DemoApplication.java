@@ -1,5 +1,7 @@
 package com.codersbay.depoloymentReplit;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,10 +15,13 @@ import java.util.Map;
 
 @SpringBootApplication
 @RestController
-public class DemoApplication {
+public class DemoApplication implements CommandLineRunner {
 
     @Value("${server.port:8080}")
     private String serverPort;
+
+    @Autowired
+    private StudentRepository studentRepository;
 
     public static void main(String[] args) {
         SpringApplication.run(DemoApplication.class, args);
@@ -49,6 +54,13 @@ public class DemoApplication {
         info.put("os.name", System.getProperty("os.name"));
         info.put("spring.profiles.active", System.getProperty("spring.profiles.active", "default"));
         return info;
+    }
+
+    @Override
+    public void run(String... args) throws Exception {
+        Student student = new Student("test", "a", 20);
+        studentRepository.save(student);
+        System.out.println(student);
     }
 }
 

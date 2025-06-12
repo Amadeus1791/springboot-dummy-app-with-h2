@@ -1,0 +1,43 @@
+# Multi-stage build fuer optimale Groesse
+FROM eclipse-temurin:17-jdk-alpine AS builder
+
+WORKDIR /app
+
+# Maven Wrapper und pom.xml kopieren
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+
+# Maven ausfuehrbar machen
+RUN chmod +x mvnw
+
+# Dependencies downloaden (fuer besseres Caching)
+RUN ./mvnw dependency:go-offline
+
+# Source Code kopieren und bauen
+COPY src src
+RUN ./mvnw clean package -DskipTests
+
+# Production Image - Optimiert fuer Render
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+
+# JAR aus Builder-Stage kopieren
+COPY --from=builder /app/target/*.jar app.jar
+
+# Port fuer Render (dynamisch)
+EXPOSE 10000
+
+# Curl fuer Health Check installieren
+RUN apk add --no-cache curl
+
+# Health Check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=120s \
+  CMD curl -f http://localhost:$PORT/actuator/health || exit 1
+
+# JVM-Tuning fuer Render's Free Tier
+ENV JAVA_OPTS="-Xmx400m -Xms200m -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0"
+
+# Anwendung starten
+CMD ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
